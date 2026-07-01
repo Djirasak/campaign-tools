@@ -1,0 +1,17 @@
+{
+    "$schema": "node_modules/wrangler/config-schema.json",
+    "name": "campaign-tools",
+    "compatibility_date": "2026-07-01",
+    "observability": {
+      "enabled": true
+    },
+    "compatibility_flags": [
+      "nodejs_compat"
+    ],
+    "services": [
+    {
+      "binding": "WORKER_SELF_REFERENCE",
+      "service": "campaign-tools"
+    }
+  ]
+  }
