@@ -46,6 +46,12 @@
       "regex": "^/about(?:/)?$",
       "routeKeys": {},
       "namedRegex": "^/about(?:/)?$"
+    },
+    {
+      "page": "/checkout",
+      "regex": "^/checkout(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/checkout(?:/)?$"
     }
   ],
   "dataRoutes": [],

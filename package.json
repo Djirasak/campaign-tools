@@ -4,8 +4,8 @@
     "dev": "next",
     "build": "npx next build",
     "start": "serve out",
-    "deploy": "@opennextjs/cloudflare build && wrangler deploy",
-    "preview": "@opennextjs/cloudflare build && wrangler dev"
+    "deploy": "opennextjs-cloudflare build && wrangler deploy",
+    "preview": "opennextjs-cloudflare build && wrangler dev"
   },
   "dependencies": {
     "@types/node": "^18.11.5",
