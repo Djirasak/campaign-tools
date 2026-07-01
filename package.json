@@ -2,7 +2,7 @@
   "private": true,
   "scripts": {
     "dev": "next",
-    "build": "next build",
+    "build": "npx next build",
     "start": "serve out",
     "deploy": "@opennextjs/cloudflare build && wrangler deploy",
     "preview": "@opennextjs/cloudflare build && wrangler dev"
