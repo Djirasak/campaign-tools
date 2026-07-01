@@ -3,8 +3,10 @@
   "scripts": {
     "dev": "next",
     "build": "next build",
-    "start": "serve out"
-  },
+    "start": "serve out",
+    "deploy": "opennextjs-cloudflare build && opennextjs-cloudflare deploy",
+    "preview": "opennextjs-cloudflare build && opennextjs-cloudflare preview"
+    },
   "dependencies": {
     "@types/node": "^18.11.5",
     "@types/react": "^18.0.23",
