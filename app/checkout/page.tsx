@@ -1,10 +1,15 @@
 "use client";
 
-import { useState, useMemo, useCallback, Fragment } from "react";
+import { useState, useMemo, useCallback, useRef, Fragment } from "react";
 import styles from "./checkout.module.css";
 
 // ── Types ──────────────────────────────────────────────────────────────────
-type Line = { package_id: number; quantity: number; is_upsell: boolean };
+type LineProperty = { key: string; value: string };
+// A CartLine has its own id (distinct from package_id) so the same package can
+// be added to the cart more than once as separate lines.
+type CartLine = { id: number; package_id: number; quantity: number; is_upsell: boolean; properties: LineProperty[] };
+type PkgConfig = { is_upsell: boolean; properties: LineProperty[] };
+const DEFAULT_PKG_CONFIG: PkgConfig = { is_upsell: false, properties: [] };
 type ShippingMethod = { ref_id: number; name: string; price: string; eta: string };
 type PackageMock = {
   ref_id: number;
@@ -64,6 +69,16 @@ function cx(...classes: (string | false | undefined | null)[]): string {
   return classes.filter(Boolean).join(" ");
 }
 
+const STATUS_TEXT: Record<number, string> = {
+  200: "OK",
+  201: "Created",
+  400: "Bad Request",
+  401: "Unauthorized",
+  404: "Not Found",
+  422: "Unprocessable Entity",
+  500: "Internal Server Error",
+};
+
 function highlight(json: string): string {
   return json.replace(
     /("(?:\\.|[^"\\])*"(\s*:)?|\b(true|false|null)\b|-?\d+(?:\.\d*)?(?:[eE][+\-]?\d+)?)/g,
@@ -97,8 +112,15 @@ export default function CheckoutPage() {
   const [postcode, setPostcode] = useState("");
   const [country, setCountry] = useState("US");
 
-  // Order
-  const [lines, setLines] = useState<Line[]>([{ package_id: 102, quantity: 1, is_upsell: false }]);
+  // Order — cartLines are the actual items in the cart (a package can appear
+  // more than once as separate lines); configs holds the upsell/properties
+  // draft for a package while its picker row is expanded, before it's added.
+  const [cartLines, setCartLines] = useState<CartLine[]>([
+    { id: 1, package_id: 102, quantity: 1, is_upsell: false, properties: [] },
+  ]);
+  const nextLineId = useRef(2);
+  const [configs, setConfigs] = useState<Record<number, PkgConfig>>({});
+  const [expandedIds, setExpandedIds] = useState<Set<number>>(new Set());
   const [ship, setShip] = useState<ShippingMethod | null>(null);
   const [coupon, setCoupon] = useState<Coupon | null>(null);
   const [couponInput, setCouponInput] = useState("");
@@ -111,6 +133,8 @@ export default function CheckoutPage() {
   const [completedSteps, setCompletedSteps] = useState<Set<number>>(new Set());
   const [isLoading, setIsLoading] = useState(false);
   const [copyLabel, setCopyLabel] = useState("Copy JSON");
+  const [payloadTab, setPayloadTab] = useState<"request" | "response">("request");
+  const [orderResponse, setOrderResponse] = useState<{ status: number; body: Record<string, unknown> } | null>(null);
 
   // ── Computed ──
   const fmt = useCallback(
@@ -125,10 +149,10 @@ export default function CheckoutPage() {
   );
 
   const getPkg = (id: number) => MOCK_PACKAGES.find((p) => p.ref_id === id);
-  const isChecked = (id: number) => lines.some((l) => l.package_id === id);
-  const getLine = (id: number) => lines.find((l) => l.package_id === id);
+  const getConfig = (id: number): PkgConfig => configs[id] ?? DEFAULT_PKG_CONFIG;
+  const isInCart = (id: number) => cartLines.some((l) => l.package_id === id);
 
-  const subtotal = lines.reduce((sum, l) => {
+  const subtotal = cartLines.reduce((sum, l) => {
     const p = getPkg(l.package_id);
     return sum + (p ? parseFloat(p.price_total) * (l.quantity || 1) : 0);
   }, 0);
@@ -143,29 +167,64 @@ export default function CheckoutPage() {
   const total = shipCost !== null ? Math.max(0, subtotal - discount + shipCost) : null;
 
   // ── Package handlers ──
-  const togglePkg = (id: number) => {
-    setLines((prev) => {
-      const idx = prev.findIndex((l) => l.package_id === id);
-      if (idx >= 0) return prev.filter((l) => l.package_id !== id);
-      return [...prev, { package_id: id, quantity: 1, is_upsell: false }];
+  const updateConfig = (id: number, updater: (c: PkgConfig) => PkgConfig) => {
+    setConfigs((prev) => ({ ...prev, [id]: updater(prev[id] ?? DEFAULT_PKG_CONFIG) }));
+  };
+
+  const toggleExpand = (id: number) => {
+    setExpandedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
     });
   };
 
-  const changePkgQty = (id: number, delta: number) => {
-    setLines((prev) =>
-      prev.map((l) =>
-        l.package_id === id ? { ...l, quantity: Math.max(1, (l.quantity || 1) + delta) } : l
-      )
+  const addToCart = (id: number) => {
+    const cfg = getConfig(id);
+    const newLine: CartLine = {
+      id: nextLineId.current++,
+      package_id: id,
+      quantity: 1,
+      is_upsell: cfg.is_upsell,
+      properties: cfg.properties,
+    };
+    setCartLines((prev) => [...prev, newLine]);
+  };
+
+  // ── Cart line handlers (used from the Order Summary cart manager) ──
+  const removeLine = (lineId: number) => {
+    setCartLines((prev) => prev.filter((l) => l.id !== lineId));
+  };
+
+  const changeLineQty = (lineId: number, delta: number) => {
+    setCartLines((prev) =>
+      prev.map((l) => (l.id === lineId ? { ...l, quantity: Math.max(1, (l.quantity || 1) + delta) } : l))
     );
   };
 
-  const setPkgQty = (id: number, val: string) => {
+  const setLineQty = (lineId: number, val: string) => {
     const n = Math.max(1, parseInt(val) || 1);
-    setLines((prev) => prev.map((l) => (l.package_id === id ? { ...l, quantity: n } : l)));
+    setCartLines((prev) => prev.map((l) => (l.id === lineId ? { ...l, quantity: n } : l)));
   };
 
   const setPkgUpsell = (id: number, val: boolean) => {
-    setLines((prev) => prev.map((l) => (l.package_id === id ? { ...l, is_upsell: val } : l)));
+    updateConfig(id, (c) => ({ ...c, is_upsell: val }));
+  };
+
+  const addProperty = (id: number) => {
+    updateConfig(id, (c) => ({ ...c, properties: [...c.properties, { key: "", value: "" }] }));
+  };
+
+  const updateProperty = (id: number, idx: number, field: "key" | "value", val: string) => {
+    updateConfig(id, (c) => ({
+      ...c,
+      properties: c.properties.map((p, i) => (i === idx ? { ...p, [field]: val } : p)),
+    }));
+  };
+
+  const removeProperty = (id: number, idx: number) => {
+    updateConfig(id, (c) => ({ ...c, properties: c.properties.filter((_, i) => i !== idx) }));
   };
 
   // ── Coupon ──
@@ -199,9 +258,73 @@ export default function CheckoutPage() {
 
   const handlePlaceOrder = () => {
     setIsLoading(true);
+    setPayloadTab("response");
     setTimeout(() => {
       setIsLoading(false);
-      alert("✅ (mock) Order created!\n\nSee the JSON payload in the sidebar →");
+
+      const needsUser = !NOT_REQUIRE_USER.includes(payMethod);
+      const missing: string[] = [];
+      if (cartLines.length === 0) missing.push("lines");
+      if (needsUser && !email.trim()) missing.push("user.email");
+      if (!line1.trim()) missing.push("shipping_address.line1");
+      if (!city.trim()) missing.push("shipping_address.city");
+      if (!postcode.trim()) missing.push("shipping_address.postcode");
+      if (!ship) missing.push("shipping_method");
+      if (payMethod === "card_token" && !cardToken.trim()) missing.push("payment_detail.card_token");
+
+      if (missing.length) {
+        setOrderResponse({
+          status: 400,
+          body: { message: `Missing required field(s): ${missing.join(", ")}`, ref_id: null },
+        });
+        return;
+      }
+
+      const refId = `ORD${Math.random().toString(36).slice(2, 10).toUpperCase()}`;
+      setOrderResponse({
+        status: 201,
+        body: {
+          ref_id: refId,
+          number: `#${Math.floor(1000 + Math.random() * 9000)}`,
+          is_test: true,
+          currency,
+          payment_method: payMethod,
+          user: {
+            email,
+            first_name: firstName,
+            last_name: lastName,
+            phone_number: phone || null,
+          },
+          shipping_address: {
+            first_name: firstName,
+            last_name: lastName,
+            line1,
+            line2: line2 || null,
+            country,
+            state: stateProvince,
+            postcode,
+            phone_number: phone || null,
+          },
+          lines: cartLines.map((l) => {
+            const p = getPkg(l.package_id);
+            const props = l.properties.filter((prop) => prop.key.trim());
+            return {
+              id: l.id,
+              product_id: l.package_id,
+              product_title: p?.name ?? null,
+              quantity: l.quantity,
+              is_upsell: l.is_upsell,
+              price_incl_tax: p ? (parseFloat(p.price_total) * l.quantity).toFixed(2) : "0.00",
+              properties: Object.fromEntries(props.map((prop) => [prop.key.trim(), prop.value])),
+            };
+          }),
+          shipping_method: ship?.name ?? null,
+          shipping_incl_tax: ship?.price ?? "0.00",
+          total_discounts: discount.toFixed(2),
+          total_incl_tax: total !== null ? total.toFixed(2) : "0.00",
+          order_status_url: `https://${domain}/order/status/${refId}/`,
+        },
+      });
     }, 1800);
   };
 
@@ -219,10 +342,12 @@ export default function CheckoutPage() {
       };
     }
 
-    obj.lines = lines.map((l) => {
+    obj.lines = cartLines.map((l) => {
       const line: Record<string, unknown> = { package_id: l.package_id };
       if (l.quantity > 1) line.quantity = l.quantity;
       if (l.is_upsell) line.is_upsell = true;
+      const props = l.properties.filter((p) => p.key.trim());
+      if (props.length) line.properties = Object.fromEntries(props.map((p) => [p.key.trim(), p.value]));
       return line;
     });
 
@@ -250,12 +375,20 @@ export default function CheckoutPage() {
     if (coupon) obj.voucher_code = coupon.code;
 
     return obj;
-  }, [payMethod, email, firstName, lastName, phone, lines, line1, line2, city, stateProvince, postcode, country, billingSame, ship, cardToken, gpaySuccessUrl, domain, coupon]);
+  }, [payMethod, email, firstName, lastName, phone, cartLines, line1, line2, city, stateProvince, postcode, country, billingSame, ship, cardToken, gpaySuccessUrl, domain, coupon]);
 
   const highlightedPayload = highlight(JSON.stringify(payload, null, 2));
+  const highlightedResponse = orderResponse ? highlight(JSON.stringify(orderResponse.body, null, 2)) : "";
 
   const copyPayload = () => {
-    navigator.clipboard.writeText(JSON.stringify(payload, null, 2));
+    const text =
+      payloadTab === "request"
+        ? JSON.stringify(payload, null, 2)
+        : orderResponse
+        ? JSON.stringify(orderResponse.body, null, 2)
+        : "";
+    if (!text) return;
+    navigator.clipboard.writeText(text);
     setCopyLabel("Copied!");
     setTimeout(() => setCopyLabel("Copy JSON"), 1500);
   };
@@ -327,27 +460,16 @@ export default function CheckoutPage() {
             <div className={styles.cardHead}>Choose a Package</div>
             <div className={styles.pkgList}>
               {MOCK_PACKAGES.map((p) => {
-                const checked = isChecked(p.ref_id);
-                const line = getLine(p.ref_id);
+                const inCart = isInCart(p.ref_id);
+                const isOpen = expandedIds.has(p.ref_id);
+                const cfg = getConfig(p.ref_id);
                 return (
                   <div key={p.ref_id} className={styles.pkgOpt}>
-                    <input
-                      type="checkbox"
-                      className={styles.pkgCheck}
-                      id={`pkg${p.ref_id}`}
-                      checked={checked}
-                      onChange={() => togglePkg(p.ref_id)}
-                    />
-                    <div className={cx(styles.pkgCard, checked && styles.checked)}>
-                      <label
-                        className={cx(styles.pkgLbl, checked && styles.checked)}
-                        htmlFor={`pkg${p.ref_id}`}
+                    <div className={cx(styles.pkgCard, inCart && styles.checked)}>
+                      <div
+                        className={cx(styles.pkgLbl, inCart && styles.checked)}
+                        onClick={() => toggleExpand(p.ref_id)}
                       >
-                        <div className={cx(styles.pkgCheckBox, checked && styles.checked)}>
-                          <svg width="11" height="11" fill="none" viewBox="0 0 24 24" stroke="white" strokeWidth="3.5">
-                            <path d="M20 6L9 17l-5-5" />
-                          </svg>
-                        </div>
                         <div className={styles.pkgImg}>{p.emoji}</div>
                         <div className={styles.pkgBody}>
                           <div className={styles.pkgName}>
@@ -357,6 +479,7 @@ export default function CheckoutPage() {
                                 {p.badge}
                               </span>
                             )}
+                            {inCart && <span className={styles.inCartTag}>✓ In Cart</span>}
                           </div>
                           <div className={styles.pkgDesc}>
                             {p.qty} {p.qty === 1 ? "bottle" : "bottles"} · {p.product_name}
@@ -367,30 +490,53 @@ export default function CheckoutPage() {
                           <div className={styles.pkgPrice}>${p.price_total}</div>
                           <div className={styles.pkgPricePer}>${p.price}/ea</div>
                         </div>
-                      </label>
-                      <div className={cx(styles.pkgControls, checked && styles.visible)}>
-                        <span className={styles.qtyLabel}>Qty</span>
-                        <div className={styles.qtyWrap}>
-                          <button className={styles.qtyBtn} onClick={() => changePkgQty(p.ref_id, -1)}>−</button>
-                          <input
-                            className={styles.qtyVal}
-                            type="number"
-                            min="1"
-                            value={line?.quantity ?? 1}
-                            onChange={(e) => setPkgQty(p.ref_id, e.target.value)}
-                          />
-                          <button className={styles.qtyBtn} onClick={() => changePkgQty(p.ref_id, +1)}>+</button>
+                      </div>
+                      <div className={cx(styles.pkgControls, isOpen && styles.visible)}>
+                        <div className={styles.pkgControlsRow}>
+                          <label className={styles.upsellToggle} title="is_upsell">
+                            <input
+                              type="checkbox"
+                              checked={cfg.is_upsell}
+                              onChange={(e) => setPkgUpsell(p.ref_id, e.target.checked)}
+                            />
+                            <span className={cx(styles.upsellPill, cfg.is_upsell && styles.active)}>
+                              Upsell
+                            </span>
+                          </label>
                         </div>
-                        <label className={styles.upsellToggle} title="is_upsell">
-                          <input
-                            type="checkbox"
-                            checked={line?.is_upsell ?? false}
-                            onChange={(e) => setPkgUpsell(p.ref_id, e.target.checked)}
-                          />
-                          <span className={cx(styles.upsellPill, (line?.is_upsell ?? false) && styles.active)}>
-                            Upsell
-                          </span>
-                        </label>
+                        <div className={styles.pkgProperties}>
+                          {cfg.properties.map((prop, idx) => (
+                            <div key={idx} className={styles.propRow}>
+                              <input
+                                className={styles.propKeyInput}
+                                type="text"
+                                placeholder="Property name"
+                                value={prop.key}
+                                onChange={(e) => updateProperty(p.ref_id, idx, "key", e.target.value)}
+                              />
+                              <input
+                                className={styles.propValInput}
+                                type="text"
+                                placeholder="Value"
+                                value={prop.value}
+                                onChange={(e) => updateProperty(p.ref_id, idx, "value", e.target.value)}
+                              />
+                              <button
+                                className={styles.propRemoveBtn}
+                                title="Remove property"
+                                onClick={() => removeProperty(p.ref_id, idx)}
+                              >
+                                ×
+                              </button>
+                            </div>
+                          ))}
+                          <button className={styles.addPropBtn} onClick={() => addProperty(p.ref_id)}>
+                            + Add property
+                          </button>
+                        </div>
+                        <button className={styles.addToCartBtn} onClick={() => addToCart(p.ref_id)}>
+                          Add to Cart
+                        </button>
                       </div>
                     </div>
                   </div>
@@ -771,15 +917,16 @@ export default function CheckoutPage() {
             <div className={styles.sumHeader}>
               <div className={styles.sumHeaderLabel}>Order Summary</div>
               <div className={styles.sumLines}>
-                {lines.length === 0 ? (
+                {cartLines.length === 0 ? (
                   <div className={styles.sumEmpty}>No packages selected</div>
                 ) : (
-                  lines.map((l) => {
+                  cartLines.map((l) => {
                     const p = getPkg(l.package_id);
                     if (!p) return null;
                     const lineTotal = parseFloat(p.price_total) * (l.quantity || 1);
+                    const props = l.properties.filter((prop) => prop.key.trim());
                     return (
-                      <div key={l.package_id} className={styles.sumLineItem}>
+                      <div key={l.id} className={styles.sumLineItem}>
                         <div className={styles.sumLineImg}>{p.emoji}</div>
                         <div className={styles.sumLineInfo}>
                           <div className={styles.sumLineName}>{p.name}</div>
@@ -789,6 +936,35 @@ export default function CheckoutPage() {
                             {l.is_upsell && (
                               <span className={styles.sumLineUpsell}> · upsell</span>
                             )}
+                          </div>
+                          {props.length > 0 && (
+                            <div className={styles.sumLineProps}>
+                              {props.map((prop, i) => (
+                                <span key={i} className={styles.sumLinePropTag}>
+                                  {prop.key}: {prop.value}
+                                </span>
+                              ))}
+                            </div>
+                          )}
+                          <div className={styles.sumLineActions}>
+                            <div className={styles.sumLineQtyWrap}>
+                              <button className={styles.sumLineQtyBtn} onClick={() => changeLineQty(l.id, -1)}>
+                                −
+                              </button>
+                              <input
+                                className={styles.sumLineQtyVal}
+                                type="number"
+                                min="1"
+                                value={l.quantity}
+                                onChange={(e) => setLineQty(l.id, e.target.value)}
+                              />
+                              <button className={styles.sumLineQtyBtn} onClick={() => changeLineQty(l.id, +1)}>
+                                +
+                              </button>
+                            </div>
+                            <button className={styles.sumLineRemoveBtn} onClick={() => removeLine(l.id)}>
+                              Remove
+                            </button>
                           </div>
                         </div>
                         <div className={styles.sumLinePrice}>${lineTotal.toFixed(2)}</div>
@@ -875,14 +1051,65 @@ export default function CheckoutPage() {
 
           {/* Payload Preview */}
           <div className={styles.payloadCard}>
+            <div className={styles.payloadTabs}>
+              <button
+                className={cx(styles.payloadTabBtn, payloadTab === "request" && styles.active)}
+                onClick={() => setPayloadTab("request")}
+              >
+                Request
+              </button>
+              <button
+                className={cx(styles.payloadTabBtn, payloadTab === "response" && styles.active)}
+                onClick={() => setPayloadTab("response")}
+              >
+                Response
+                {!isLoading && orderResponse && (
+                  <span className={cx(styles.statusChip, orderResponse.status < 300 && styles.statusOk)}>
+                    {orderResponse.status}
+                  </span>
+                )}
+              </button>
+            </div>
             <div className={styles.payloadHead}>
-              <span className={styles.payloadTitle}>POST /api/v1/orders/create/</span>
+              <span className={styles.payloadTitle}>
+                {payloadTab === "request"
+                  ? "POST /api/v1/orders/create/"
+                  : isLoading
+                  ? "Processing..."
+                  : orderResponse
+                  ? `${orderResponse.status} ${STATUS_TEXT[orderResponse.status] ?? ""}`
+                  : "No response yet"}
+              </span>
               <button className={styles.payloadCopy} onClick={copyPayload}>{copyLabel}</button>
             </div>
-            <pre
-              className={styles.payloadPre}
-              dangerouslySetInnerHTML={{ __html: highlightedPayload }}
-            />
+            {payloadTab === "request" ? (
+              <pre
+                className={styles.payloadPre}
+                dangerouslySetInnerHTML={{ __html: highlightedPayload }}
+              />
+            ) : isLoading ? (
+              <div className={styles.payloadLoading}>
+                <svg
+                  className={styles.spinIcon}
+                  width="14"
+                  height="14"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                >
+                  <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83" />
+                </svg>
+                Processing request...
+              </div>
+            ) : orderResponse ? (
+              <pre
+                className={styles.payloadPre}
+                dangerouslySetInnerHTML={{ __html: highlightedResponse }}
+              />
+            ) : (
+              <div className={styles.payloadEmpty}>Click &ldquo;Place Order&rdquo; to see the response.</div>
+            )}
           </div>
         </aside>
       </div>

@@ -3,6 +3,7 @@
   "scripts": {
     "dev": "next",
     "build": "npx next build",
+    "compile": "opennextjs-cloudflare build",
     "start": "serve out",
     "deploy": "opennextjs-cloudflare build && wrangler deploy",
     "preview": "opennextjs-cloudflare build && wrangler dev"

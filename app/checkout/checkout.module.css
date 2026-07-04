@@ -29,29 +29,29 @@
 /* ── DEV BAR ── */
 .devBar {
   background: #0F172A;
-  padding: 0 20px;
+  padding: 0 24px;
   display: flex;
   align-items: center;
   gap: 0;
   overflow-x: auto;
   border-bottom: 1px solid #1E293B;
-  min-height: 40px;
+  min-height: 56px;
 }
 .devBarLabel {
-  font-size: 10px;
+  font-size: 12px;
   font-weight: 700;
   letter-spacing: .08em;
   text-transform: uppercase;
   color: #475569;
   font-family: "SF Mono", "Fira Code", monospace;
   white-space: nowrap;
-  padding: 0 10px 0 0;
+  padding: 0 12px 0 0;
 }
 .devBarSep {
   width: 1px;
-  height: 20px;
+  height: 28px;
   background: #1E293B;
-  margin: 0 14px;
+  margin: 0 18px;
   flex-shrink: 0;
 }
 .devInput {
@@ -60,25 +60,25 @@
   border-bottom: 1px solid #334155;
   color: #CBD5E1;
   font-family: "SF Mono", "Fira Code", monospace;
-  font-size: 11px;
-  padding: 4px 6px;
+  font-size: 13px;
+  padding: 8px 8px;
   outline: none;
   min-width: 0;
-  width: 200px;
+  width: 240px;
   transition: border-color .15s;
 }
 .devInput:focus { border-color: #3B82F6; color: #E2E8F0; }
-.devCurrency { width: 52px; }
+.devCurrency { width: 64px; }
 .devTag {
-  font-size: 10px;
+  font-size: 11px;
   font-weight: 700;
   letter-spacing: .06em;
-  padding: 2px 6px;
+  padding: 3px 8px;
   border-radius: 4px;
   background: #1E293B;
   color: #64748B;
   font-family: monospace;
-  margin-left: 10px;
+  margin-left: 12px;
   white-space: nowrap;
 }
 .devTagTest { color: #F59E0B; background: #1C1500; }
@@ -152,8 +152,6 @@
 .pkgList { display: flex; flex-direction: column; gap: 8px; }
 .pkgOpt { position: relative; }
 
-.pkgCheck { display: none; }
-
 .pkgCard {
   border: 1.5px solid var(--border);
   border-radius: var(--r-sm);
@@ -172,21 +170,17 @@
 }
 .pkgLbl.checked { background: var(--accent-bg); }
 
-.pkgCheckBox {
-  width: 18px;
-  height: 18px;
-  border-radius: 4px;
-  border: 2px solid var(--border);
-  flex-shrink: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: border-color .15s, background .15s;
-  background: white;
+.inCartTag {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: .02em;
+  color: var(--success);
+  background: var(--success-bg);
+  border: 1px solid #A7F3D0;
+  padding: 2px 7px;
+  border-radius: 99px;
+  white-space: nowrap;
 }
-.pkgCheckBox.checked { border-color: var(--accent); background: var(--accent); }
-.pkgCheckBox svg { opacity: 0; transition: opacity .12s; }
-.pkgCheckBox.checked svg { opacity: 1; }
 
 .pkgImg {
   width: 44px;
@@ -219,56 +213,81 @@
 .pkgPrice { font-size: 16px; font-weight: 800; font-variant-numeric: tabular-nums; }
 .pkgPricePer { font-size: 11px; color: var(--ink-3); margin-top: 1px; }
 
+.addToCartBtn {
+  width: 100%;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--r-sm);
+  border: 1.5px solid var(--accent);
+  background: var(--accent);
+  color: white;
+  font-size: 13px;
+  font-weight: 700;
+  font-family: inherit;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background .15s, color .15s, border-color .15s;
+}
+.addToCartBtn:hover { background: var(--accent-dk); border-color: var(--accent-dk); }
+
 .pkgControls {
   display: none;
-  padding: 10px 16px 12px 50px;
+  flex-direction: column;
   gap: 12px;
-  align-items: center;
+  padding: 12px 16px 14px;
   border-top: 1px solid #D6E4FD;
   background: var(--accent-bg);
 }
 .pkgControls.visible { display: flex; }
+.pkgControlsRow { display: flex; align-items: center; gap: 12px; }
 
-.qtyLabel {
-  font-size: 11px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: .04em;
-  color: var(--ink-2);
-  white-space: nowrap;
-}
-.qtyWrap {
+.pkgProperties {
   display: flex;
-  align-items: center;
+  flex-direction: column;
+  gap: 8px;
+  padding-top: 12px;
+  border-top: 1px dashed #C7D7FB;
+}
+.propRow { display: flex; align-items: center; gap: 8px; }
+.propKeyInput, .propValInput {
+  flex: 1;
+  height: 34px;
+  padding: 0 10px;
   border: 1.5px solid var(--border);
   border-radius: var(--r-sm);
+  font-size: 12px;
+  font-family: inherit;
   background: white;
-  overflow: hidden;
+  transition: border-color .15s;
 }
-.qtyBtn {
-  width: 30px;
-  height: 30px;
+.propKeyInput:focus, .propValInput:focus { outline: none; border-color: var(--accent); }
+.propRemoveBtn {
+  width: 26px;
+  height: 26px;
+  flex-shrink: 0;
   border: none;
   background: none;
+  color: var(--ink-3);
   font-size: 16px;
+  line-height: 1;
   cursor: pointer;
-  color: var(--ink-2);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: background .1s;
+  transition: color .15s;
 }
-.qtyBtn:hover { background: var(--surface-2); }
-.qtyVal {
-  width: 32px;
-  text-align: center;
-  font-size: 14px;
+.propRemoveBtn:hover { color: var(--danger); }
+.addPropBtn {
+  align-self: flex-start;
+  font-size: 12px;
   font-weight: 700;
-  font-variant-numeric: tabular-nums;
-  border: none;
-  outline: none;
+  color: var(--accent);
   background: none;
+  border: none;
+  font-family: inherit;
+  cursor: pointer;
+  padding: 2px 0;
 }
+
 .upsellToggle {
   display: flex;
   align-items: center;
@@ -613,6 +632,63 @@
 }
 .sumLineQty { font-size: 11px; opacity: .5; margin-top: 3px; }
 .sumLineUpsell { color: #FDE68A; }
+
+.sumLineProps { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 6px; }
+.sumLinePropTag {
+  font-size: 10px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: rgba(255,255,255,.08);
+  border: 1px solid rgba(255,255,255,.12);
+  color: rgba(255,255,255,.65);
+}
+
+.sumLineActions { display: flex; align-items: center; gap: 10px; margin-top: 8px; }
+.sumLineQtyWrap {
+  display: flex;
+  align-items: center;
+  border: 1px solid rgba(255,255,255,.15);
+  border-radius: 6px;
+  overflow: hidden;
+}
+.sumLineQtyBtn {
+  width: 22px;
+  height: 22px;
+  border: none;
+  background: none;
+  color: rgba(255,255,255,.7);
+  font-size: 13px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background .1s;
+}
+.sumLineQtyBtn:hover { background: rgba(255,255,255,.12); color: white; }
+.sumLineQtyVal {
+  width: 26px;
+  text-align: center;
+  font-size: 12px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  border: none;
+  outline: none;
+  background: none;
+  color: white;
+}
+.sumLineRemoveBtn {
+  font-size: 11px;
+  font-weight: 600;
+  color: rgba(255,255,255,.4);
+  background: none;
+  border: none;
+  font-family: inherit;
+  cursor: pointer;
+  padding: 0;
+  transition: color .15s;
+}
+.sumLineRemoveBtn:hover { color: #FCA5A5; }
+
 .sumLinePrice {
   font-size: 13px;
   font-weight: 700;
@@ -705,6 +781,59 @@
   padding: 18px;
   margin-top: 16px;
 }
+.payloadTabs {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 14px;
+  background: #1E293B;
+  border-radius: 7px;
+  padding: 3px;
+}
+.payloadTabBtn {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  height: 28px;
+  border: none;
+  border-radius: 5px;
+  background: none;
+  color: #64748B;
+  font-size: 11px;
+  font-weight: 700;
+  font-family: "SF Mono", "Fira Code", monospace;
+  cursor: pointer;
+  transition: background .15s, color .15s;
+}
+.payloadTabBtn:hover { color: #94A3B8; }
+.payloadTabBtn.active { background: #334155; color: #E2E8F0; }
+.statusChip {
+  font-size: 10px;
+  font-weight: 700;
+  padding: 1px 6px;
+  border-radius: 99px;
+  background: #7F1D1D;
+  color: #FCA5A5;
+}
+.statusChip.statusOk { background: #064E3B; color: #6EE7B7; }
+
+.payloadEmpty {
+  font-size: 12px;
+  color: #475569;
+  font-family: "SF Mono", "Fira Code", monospace;
+  padding: 12px 0;
+}
+.payloadLoading {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: #64748B;
+  font-family: "SF Mono", "Fira Code", monospace;
+  padding: 20px 0;
+}
+
 .payloadHead {
   display: flex;
   justify-content: space-between;
