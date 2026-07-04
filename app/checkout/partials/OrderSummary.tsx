@@ -1,9 +1,15 @@
 "use client";
 
+import { useState } from "react";
 import styles from "../checkout.module.css";
 import { cx } from "../../../lib/utils";
 import { MOCK_PACKAGES } from "../mock-data";
 import type { CartLine, Coupon } from "../types";
+
+// Kept in sync with the .sumLineRemoving transition duration in checkout.module.css —
+// the line stays in the DOM playing its exit animation for this long before
+// the actual removal (onRemoveLine) fires.
+const REMOVE_ANIM_MS = 220;
 
 type Props = {
   cartLines: CartLine[];
@@ -44,6 +50,20 @@ export default function OrderSummary({
 }: Props) {
   const getPkg = (id: number) => MOCK_PACKAGES.find((p) => p.ref_id === id);
 
+  const [removingIds, setRemovingIds] = useState<Set<number>>(new Set());
+
+  const handleRemove = (lineId: number) => {
+    setRemovingIds((prev) => new Set(prev).add(lineId));
+    setTimeout(() => {
+      onRemoveLine(lineId);
+      setRemovingIds((prev) => {
+        const next = new Set(prev);
+        next.delete(lineId);
+        return next;
+      });
+    }, REMOVE_ANIM_MS);
+  };
+
   return (
     <div className={styles.sumCard}>
       <div className={styles.sumHeader}>
@@ -57,8 +77,9 @@ export default function OrderSummary({
               if (!p) return null;
               const lineTotal = parseFloat(p.price_total) * (l.quantity || 1);
               const props = l.properties.filter((prop) => prop.key.trim());
+              const removing = removingIds.has(l.id);
               return (
-                <div key={l.id} className={styles.sumLineItem}>
+                <div key={l.id} className={cx(styles.sumLineItem, removing && styles.sumLineRemoving)}>
                   <div className={styles.sumLineImg}>{p.emoji}</div>
                   <div className={styles.sumLineInfo}>
                     <div className={styles.sumLineName}>{p.name}</div>
@@ -91,7 +112,11 @@ export default function OrderSummary({
                           +
                         </button>
                       </div>
-                      <button className={styles.sumLineRemoveBtn} onClick={() => onRemoveLine(l.id)}>
+                      <button
+                        className={styles.sumLineRemoveBtn}
+                        onClick={() => handleRemove(l.id)}
+                        disabled={removing}
+                      >
                         Remove
                       </button>
                     </div>

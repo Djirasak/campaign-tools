@@ -43,12 +43,10 @@ export default function CheckoutPage() {
   // Order — cartLines are the actual items in the cart (a package can appear
   // more than once as separate lines); configs holds the upsell/properties
   // draft for a package while its picker row is expanded, before it's added.
-  const [cartLines, setCartLines] = useState<CartLine[]>([
-    { id: 1, package_id: 102, quantity: 1, is_upsell: false, properties: [] },
-  ]);
-  const nextLineId = useRef(2);
+  const [cartLines, setCartLines] = useState<CartLine[]>([]);
+  const nextLineId = useRef(1);
   const [configs, setConfigs] = useState<Record<number, PkgConfig>>({});
-  const [expandedIds, setExpandedIds] = useState<Set<number>>(new Set());
+  const [expandedId, setExpandedId] = useState<number | null>(null);
   const [ship, setShip] = useState<ShippingMethod | null>(null);
   const [coupon, setCoupon] = useState<Coupon | null>(null);
   const [couponInput, setCouponInput] = useState("");
@@ -99,12 +97,7 @@ export default function CheckoutPage() {
   };
 
   const toggleExpand = (id: number) => {
-    setExpandedIds((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
-    });
+    setExpandedId((prev) => (prev === id ? null : id));
   };
 
   // Mirrors campaign-cart's cartStore.addItem: merges on package_id, bumping
@@ -133,6 +126,7 @@ export default function CheckoutPage() {
       };
       return [...prev, newLine];
     });
+    setExpandedId(null);
   };
 
   // ── Cart line handlers (used from the Order Summary cart manager) ──
@@ -305,8 +299,7 @@ export default function CheckoutPage() {
     }
 
     obj.lines = cartLines.map((l) => {
-      const line: Record<string, unknown> = { package_id: l.package_id };
-      if (l.quantity > 1) line.quantity = l.quantity;
+      const line: Record<string, unknown> = { package_id: l.package_id, quantity: l.quantity || 1 };
       if (l.is_upsell) line.is_upsell = true;
       const props = l.properties.filter((p) => p.key.trim());
       if (props.length) line.properties = Object.fromEntries(props.map((p) => [p.key.trim(), p.value]));
@@ -378,9 +371,8 @@ export default function CheckoutPage() {
         {/* ── LEFT ── */}
         <div>
           <PackagePicker
-            cartLines={cartLines}
             configs={configs}
-            expandedIds={expandedIds}
+            expandedId={expandedId}
             onToggleExpand={toggleExpand}
             onSetUpsell={setPkgUpsell}
             onAddProperty={addProperty}

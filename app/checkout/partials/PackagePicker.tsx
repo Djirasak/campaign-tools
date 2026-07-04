@@ -3,12 +3,11 @@
 import styles from "../checkout.module.css";
 import { cx } from "../../../lib/utils";
 import { MOCK_PACKAGES, DEFAULT_PKG_CONFIG } from "../mock-data";
-import type { CartLine, PkgConfig } from "../types";
+import type { PkgConfig } from "../types";
 
 type Props = {
-  cartLines: CartLine[];
   configs: Record<number, PkgConfig>;
-  expandedIds: Set<number>;
+  expandedId: number | null;
   onToggleExpand: (id: number) => void;
   onSetUpsell: (id: number, val: boolean) => void;
   onAddProperty: (id: number) => void;
@@ -18,9 +17,8 @@ type Props = {
 };
 
 export default function PackagePicker({
-  cartLines,
   configs,
-  expandedIds,
+  expandedId,
   onToggleExpand,
   onSetUpsell,
   onAddProperty,
@@ -28,7 +26,6 @@ export default function PackagePicker({
   onRemoveProperty,
   onAddToCart,
 }: Props) {
-  const isInCart = (id: number) => cartLines.some((l) => l.package_id === id);
   const getConfig = (id: number): PkgConfig => configs[id] ?? DEFAULT_PKG_CONFIG;
 
   return (
@@ -38,16 +35,12 @@ export default function PackagePicker({
         <div className={styles.cardHead}>Choose a Package</div>
         <div className={styles.pkgList}>
           {MOCK_PACKAGES.map((p) => {
-            const inCart = isInCart(p.ref_id);
-            const isOpen = expandedIds.has(p.ref_id);
+            const isOpen = expandedId === p.ref_id;
             const cfg = getConfig(p.ref_id);
             return (
               <div key={p.ref_id} className={styles.pkgOpt}>
-                <div className={cx(styles.pkgCard, inCart && styles.checked)}>
-                  <div
-                    className={cx(styles.pkgLbl, inCart && styles.checked)}
-                    onClick={() => onToggleExpand(p.ref_id)}
-                  >
+                <div className={styles.pkgCard}>
+                  <div className={styles.pkgLbl} onClick={() => onToggleExpand(p.ref_id)}>
                     <div className={styles.pkgImg}>{p.emoji}</div>
                     <div className={styles.pkgBody}>
                       <div className={styles.pkgName}>
@@ -57,7 +50,6 @@ export default function PackagePicker({
                             {p.badge}
                           </span>
                         )}
-                        {inCart && <span className={styles.inCartTag}>✓ In Cart</span>}
                       </div>
                       <div className={styles.pkgDesc}>
                         {p.qty} {p.qty === 1 ? "bottle" : "bottles"} · {p.product_name}
