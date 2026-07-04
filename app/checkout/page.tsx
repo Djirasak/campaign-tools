@@ -6,6 +6,7 @@ import type { CartLine, PkgConfig, ShippingMethod, Coupon, OrderResponse, Payloa
 import { COUPONS, NOT_REQUIRE_USER, DEFAULT_PKG_CONFIG, MOCK_PACKAGES } from "./mock-data";
 import { propsEqual, buildInfoSummaryHtml, buildInfoSummaryWithShipHtml, generateFakeContact, generateFakeAddress } from "./utils";
 import { highlight } from "../../lib/utils";
+import { resolveCampaignHostPreset, type CampaignHostPreset } from "../../lib/campaigns-api";
 import DevBar from "../components/DevBar";
 import SiteHeader from "../components/SiteHeader";
 import PackagePicker from "./partials/PackagePicker";
@@ -20,8 +21,10 @@ import PayloadPreview from "./partials/PayloadPreview";
 export default function CheckoutPage() {
   // Config
   const [apiKey, setApiKey] = useState("pk_test_demo1234567890");
-  const [domain, setDomain] = useState("demo.29next.com");
+  const [campaignHostPreset, setCampaignHostPreset] = useState<CampaignHostPreset>("local");
+  const [customCampaignHost, setCustomCampaignHost] = useState("");
   const [currency, setCurrency] = useState("USD");
+  const campaignHostUrl = resolveCampaignHostPreset(campaignHostPreset, customCampaignHost);
 
   // Form — contact
   const [email, setEmail] = useState("");
@@ -281,7 +284,7 @@ export default function CheckoutPage() {
           shipping_incl_tax: ship?.price ?? "0.00",
           total_discounts: discount.toFixed(2),
           total_incl_tax: total !== null ? total.toFixed(2) : "0.00",
-          order_status_url: `https://${domain}/order/status/${refId}/`,
+          order_status_url: `${campaignHostUrl}/order/status/${refId}/`,
         },
       });
     }, 1800);
@@ -326,13 +329,13 @@ export default function CheckoutPage() {
     obj.payment_detail = detail;
 
     const successUrl =
-      payMethod === "google_pay" && gpaySuccessUrl ? gpaySuccessUrl : `https://${domain}/order/success/`;
+      payMethod === "google_pay" && gpaySuccessUrl ? gpaySuccessUrl : `${campaignHostUrl}/order/success/`;
     obj.success_url = successUrl;
 
     if (coupon) obj.voucher_code = coupon.code;
 
     return obj;
-  }, [payMethod, email, firstName, lastName, phone, cartLines, line1, line2, city, stateProvince, postcode, country, billingSame, ship, cardToken, gpaySuccessUrl, domain, coupon]);
+  }, [payMethod, email, firstName, lastName, phone, cartLines, line1, line2, city, stateProvince, postcode, country, billingSame, ship, cardToken, gpaySuccessUrl, campaignHostUrl, coupon]);
 
   const highlightedPayload = highlight(JSON.stringify(payload, null, 2));
   const highlightedResponse = orderResponse ? highlight(JSON.stringify(orderResponse.body, null, 2)) : "";
@@ -360,10 +363,12 @@ export default function CheckoutPage() {
     <div className={styles.checkout}>
       <DevBar
         apiKey={apiKey}
-        domain={domain}
+        campaignHostPreset={campaignHostPreset}
+        customCampaignHost={customCampaignHost}
         currency={currency}
         onApiKeyChange={setApiKey}
-        onDomainChange={setDomain}
+        onCampaignHostPresetChange={setCampaignHostPreset}
+        onCustomCampaignHostChange={setCustomCampaignHost}
         onCurrencyChange={setCurrency}
       />
 
