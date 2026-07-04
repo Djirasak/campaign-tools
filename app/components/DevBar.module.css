@@ -1,0 +1,57 @@
+.devBar {
+  background: #0F172A;
+  padding: 0 24px;
+  display: flex;
+  align-items: center;
+  gap: 0;
+  overflow-x: auto;
+  border-bottom: 1px solid #1E293B;
+  min-height: 56px;
+}
+.devBarLabel {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  color: #475569;
+  font-family: "SF Mono", "Fira Code", monospace;
+  white-space: nowrap;
+  padding: 0 12px 0 0;
+}
+.devBarSep {
+  width: 1px;
+  height: 28px;
+  background: #1E293B;
+  margin: 0 18px;
+  flex-shrink: 0;
+}
+.devInput {
+  background: transparent;
+  border: none;
+  border-bottom: 1px solid #334155;
+  color: #CBD5E1;
+  font-family: "SF Mono", "Fira Code", monospace;
+  font-size: 13px;
+  padding: 8px 8px;
+  outline: none;
+  min-width: 0;
+  width: 240px;
+  transition: border-color .15s;
+  box-sizing: border-box;
+  margin: 0;
+}
+.devInput:focus { border-color: #3B82F6; color: #E2E8F0; }
+.devCurrency { width: 64px; }
+.devTag {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: .06em;
+  padding: 3px 8px;
+  border-radius: 4px;
+  background: #1E293B;
+  color: #64748B;
+  font-family: monospace;
+  margin-left: 12px;
+  white-space: nowrap;
+}
+.devTagTest { color: #F59E0B; background: #1C1500; }

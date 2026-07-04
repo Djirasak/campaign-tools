@@ -26,88 +26,7 @@
 
 .checkout *, .checkout *::before, .checkout *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-/* ── DEV BAR ── */
-.devBar {
-  background: #0F172A;
-  padding: 0 24px;
-  display: flex;
-  align-items: center;
-  gap: 0;
-  overflow-x: auto;
-  border-bottom: 1px solid #1E293B;
-  min-height: 56px;
-}
-.devBarLabel {
-  font-size: 12px;
-  font-weight: 700;
-  letter-spacing: .08em;
-  text-transform: uppercase;
-  color: #475569;
-  font-family: "SF Mono", "Fira Code", monospace;
-  white-space: nowrap;
-  padding: 0 12px 0 0;
-}
-.devBarSep {
-  width: 1px;
-  height: 28px;
-  background: #1E293B;
-  margin: 0 18px;
-  flex-shrink: 0;
-}
-.devInput {
-  background: transparent;
-  border: none;
-  border-bottom: 1px solid #334155;
-  color: #CBD5E1;
-  font-family: "SF Mono", "Fira Code", monospace;
-  font-size: 13px;
-  padding: 8px 8px;
-  outline: none;
-  min-width: 0;
-  width: 240px;
-  transition: border-color .15s;
-}
-.devInput:focus { border-color: #3B82F6; color: #E2E8F0; }
-.devCurrency { width: 64px; }
-.devTag {
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: .06em;
-  padding: 3px 8px;
-  border-radius: 4px;
-  background: #1E293B;
-  color: #64748B;
-  font-family: monospace;
-  margin-left: 12px;
-  white-space: nowrap;
-}
-.devTagTest { color: #F59E0B; background: #1C1500; }
-
-/* ── HEADER ── */
-.siteHeader {
-  background: var(--surface);
-  border-bottom: 1px solid var(--border);
-  padding: 0 24px;
-  height: 60px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
-.brand {
-  font-family: Georgia, "Times New Roman", serif;
-  font-size: 20px;
-  font-style: italic;
-  color: var(--ink);
-  text-decoration: none;
-  letter-spacing: -.01em;
-}
-.secureBadge {
-  display: flex;
-  align-items: center;
-  gap: 5px;
-  font-size: 12px;
-  color: var(--ink-3);
-}
+/* DevBar and SiteHeader styles moved to app/components/ (shared, reusable outside checkout) */
 
 /* ── LAYOUT ── */
 .mainWrap {
@@ -147,6 +66,42 @@
   align-items: center;
   justify-content: space-between;
 }
+
+.autofillBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--accent);
+  background: var(--accent-bg);
+  border: 1px solid #D6E4FD;
+  border-radius: 99px;
+  padding: 6px 12px 6px 10px;
+  cursor: pointer;
+  transition: background .15s, border-color .15s, color .15s;
+  white-space: nowrap;
+}
+.autofillBtn svg { flex-shrink: 0; }
+.autofillBtn:hover { background: var(--accent); border-color: var(--accent); color: white; }
+.autofillBtn:active { transform: scale(.97); }
+
+.cardHeadActions { display: flex; align-items: center; gap: 8px; }
+.autofillCountrySelect {
+  height: 30px;
+  padding: 0 8px;
+  border: 1px solid var(--border);
+  border-radius: 99px;
+  background: var(--surface);
+  color: var(--ink-2);
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  max-width: 130px;
+}
+.autofillCountrySelect:focus { outline: none; border-color: var(--accent); }
 
 /* ── PACKAGE PICKER ── */
 .pkgList { display: flex; flex-direction: column; gap: 8px; }
@@ -899,5 +854,3 @@
   from { opacity: 0; transform: translateX(8px); }
   to { opacity: 1; transform: none; }
 }
-@keyframes spin { to { transform: rotate(360deg); } }
-.spinIcon { animation: spin .8s linear infinite; display: inline-block; }

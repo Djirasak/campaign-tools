@@ -8,6 +8,9 @@ importers:
 
   .:
     dependencies:
+      '@faker-js/faker':
+        specifier: ^8.4.1
+        version: 8.4.1
       '@types/node':
         specifier: ^18.11.5
         version: 18.19.130
@@ -29,9 +32,6 @@ importers:
       serve:
         specifier: ^14.2.0
         version: 14.2.6
-      typescript:
-        specifier: ^4.8.4
-        version: 4.9.5
       wrangler:
         specifier: ^4.106.0
         version: 4.106.0
@@ -39,6 +39,9 @@ importers:
       '@opennextjs/cloudflare':
         specifier: ^1.20.1
         version: 1.20.1(next@16.2.9(react-dom@18.3.1(react@18.3.1))(react@18.3.1))(wrangler@4.106.0)
+      typescript:
+        specifier: ^6.0.3
+        version: 6.0.3
 
 packages:
 
@@ -648,6 +651,10 @@ packages:
     engines: {node: '>=18'}
     cpu: [x64]
     os: [win32]
+
+  '@faker-js/faker@8.4.1':
+    resolution: {integrity: sha512-XQ3cU+Q8Uqmrbf2e0cIC/QN43sTBSC8KF12u29Mb47tWrt2hAgBXSgpZMj4Ao8Uk0iJcU99QsOCaIL8934obCg==}
+    engines: {node: ^14.17.0 || ^16.13.0 || >=18.0.0, npm: '>=6.14.13'}
 
   '@img/colour@1.1.0':
     resolution: {integrity: sha512-Td76q7j57o/tLVdgS746cYARfSyxk8iEfRxewL9h4OMzYhbW4TAcppl0mT4eyqXddh6L/jwoM75mo7ixa/pCeQ==}
@@ -2074,9 +2081,9 @@ packages:
     resolution: {integrity: sha512-faYHw0anBbc/kWF3zFTEnxSFOAGUX9GFbOBthvDdLsIlEoWOFOtS0zgCiQYwIskL9iGXZL3kAXD8OoZ4GmMATA==}
     engines: {node: '>= 18'}
 
-  typescript@4.9.5:
-    resolution: {integrity: sha512-1FXk9E2Hm+QzZQ7z+McJiHL4NW1F2EzMu9Nq9i3zAaGqibafqYwCVU6WyWAuyQRRzOlxou8xZSyXLEN8oKj24g==}
-    engines: {node: '>=4.2.0'}
+  typescript@6.0.3:
+    resolution: {integrity: sha512-y2TvuxSZPDyQakkFRPZHKFm+KKVqIisdg9/CZwm9ftvKXLP8NRWj38/ODjNbr43SsoXqNuAisEf1GdCxqWcdBw==}
+    engines: {node: '>=14.17'}
     hasBin: true
 
   undici-types@5.26.5:
@@ -2961,6 +2968,8 @@ snapshots:
 
   '@esbuild/win32-x64@0.28.1':
     optional: true
+
+  '@faker-js/faker@8.4.1': {}
 
   '@img/colour@1.1.0': {}
 
@@ -4408,7 +4417,7 @@ snapshots:
       media-typer: 1.1.0
       mime-types: 3.0.2
 
-  typescript@4.9.5: {}
+  typescript@6.0.3: {}
 
   undici-types@5.26.5: {}
 
